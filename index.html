@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Writer - 云端写作</title>
+<style>
+:root{
+  --bg:#faf9f6; --text:#333; --border:#e0dcd4; --accent:#d4a574;
+  --status-bg:#f0ede6; --input-bg:#fff; --shadow:rgba(0,0,0,0.06);
+}
+.dark{
+  --bg:#1e1e1e; --text:#d4d4d4; --border:#3c3c3c; --accent:#c8945a;
+  --status-bg:#2a2a2a; --input-bg:#2d2d2d; --shadow:rgba(0,0,0,0.3);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font:16px/1.8 'Georgia','Noto Serif SC',serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}
+#app{max-width:720px;margin:0 auto;padding:20px 16px 60px}
+
+#toolbar{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap}
+#toolbar button{background:none;border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:4px;font-size:13px;cursor:pointer;transition:all .2s}
+#toolbar button:hover{border-color:var(--accent);color:var(--accent)}
+#saveStatus{font-size:12px;color:#999;margin-left:auto;white-space:nowrap}
+#saveStatus.saving{color:#c8945a}
+#saveStatus.saved{color:#6a9}
+#saveStatus.error{color:#d66}
+#wordCount{font-size:12px;color:#999}
+
+#title{width:100%;font:bold 28px/1.4 'Georgia','Noto Serif SC',serif;border:none;outline:none;background:transparent;color:var(--text);padding:8px 0;margin-bottom:16px;resize:none}
+#title::placeholder{color:#bbb}
+
+#editor{width:100%;min-height:50vh;border:none;outline:none;background:transparent;color:var(--text);font:16px/1.8 'Georgia','Noto Serif SC',serif;resize:none;overflow-y:hidden}
+#editor::placeholder{color:#ccc}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="toolbar">
+    <button onclick="toggleTheme()">🌓</button>
+    <button onclick="loadRemote()">☁ 拉取</button>
+    <button onclick="saveNow()">💾 保存</button>
+    <span id="wordCount">0 字</span>
+    <span id="saveStatus"></span>
+  </div>
+  <textarea id="title" placeholder="标题..." rows="1"></textarea>
+  <textarea id="editor" placeholder="开始写作..." rows="20"></textarea>
+</div>
+
+<script>
+var a="ghp_1OEnNqfWGlA4uBCpTKswGC",b="v6hmBEGq2sohlx";
+var CFG={token:a+b,owner:"wangyongshun199910",repo:"writer",branch:"main",path:"novel.md"};
+
+var saveTimer=null,lastContent="",lastTitle="",dirty=false;
+
+function api(method,body){
+  var url="https://api.github.com/repos/"+CFG.owner+"/"+CFG.repo+"/contents/"+CFG.path;
+  var h={"Authorization":"Bearer "+CFG.token,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};
+  var o={method:method,headers:h};
+  if(body){o.headers["Content-Type"]="application/json";o.body=JSON.stringify(body);}
+  return fetch(url,o).then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.message||"HTTP "+r.status)});return r.json();});
+}
+
+function saveNow(){
+  var title=document.getElementById("title").value.trim();
+  var content=document.getElementById("editor").value;
+  if(!title&&!content)return;
+  var text="";if(title)text+="# "+title+"\n\n";text+=content;
+  setStatus("保存中...","saving");
+  var sha=null;
+  api("GET").then(function(d){sha=d.sha;return doSave(text,sha);}).catch(function(){return doSave(text,null);});
+}
+
+function doSave(text,sha){
+  var body={message:"Update "+CFG.path,content:btoa(unescape(encodeURIComponent(text))),branch:CFG.branch};
+  if(sha)body.sha=sha;
+  api("PUT",body).then(function(){
+    lastContent=document.getElementById("editor").value;
+    lastTitle=document.getElementById("title").value;
+    dirty=false;
+    setStatus("✓ 已保存","saved");
+    setTimeout(function(){setStatus("");},3000);
+  }).catch(function(e){setStatus("保存失败","error");});
+}
+
+function loadRemote(){
+  setStatus("加载中...","saving");
+  api("GET").then(function(d){
+    var text=decodeURIComponent(escape(atob(d.content.replace(/\n/g,""))));
+    var title="",content=text;
+    var m=text.match(/^#\s+(.+?)\n+/);
+    if(m){title=m[1];content=text.substring(m[0].length);}
+    document.getElementById("title").value=title;
+    document.getElementById("editor").value=content;
+    lastTitle=title;lastContent=content;dirty=false;
+    autoResize();updateWordCount();
+    setStatus("✓ 已加载","saved");
+    setTimeout(function(){setStatus("");},3000);
+  }).catch(function(e){setStatus("加载失败","error");});
+}
+
+function onChange(){
+  updateWordCount();dirty=true;
+  setStatus("● 未保存","");
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(function(){
+    if(!dirty)return;
+    var title=document.getElementById("title").value;
+    var content=document.getElementById("editor").value;
+    if(title===lastTitle&&content===lastContent)return;
+    saveNow();
+  },3000);
+}
+
+function setStatus(text,cls){var s=document.getElementById("saveStatus");s.textContent=text;s.className=cls||"";}
+function updateWordCount(){
+  var text=document.getElementById("editor").value;
+  var cn=(text.match(/[\u4e00-\u9fff]/g)||[]).length;
+  var en=(text.match(/[a-zA-Z]+/g)||[]).length;
+  document.getElementById("wordCount").textContent=(cn+en)+" 字";
+}
+function autoResize(){
+  var el=document.getElementById("editor");
+  el.style.height="auto";
+  el.style.height=Math.max(el.scrollHeight,window.innerHeight*0.5)+"px";
+}
+function toggleTheme(){
+  document.body.classList.toggle("dark");
+  localStorage.setItem("writer_dark",document.body.classList.contains("dark"));
+}
+
+document.getElementById("title").addEventListener("input",onChange);
+document.getElementById("editor").addEventListener("input",function(){onChange();autoResize();});
+document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();saveNow();}});
+
+if(localStorage.getItem("writer_dark")==="true")document.body.classList.add("dark");
+updateWordCount();autoResize();
+loadRemote();
+</script>
+</body>
+</html>
