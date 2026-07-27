@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Writer - äºç«¯åä½</title>
+<title>Writer - 云端写作</title>
 <style>
 :root{
   --bg:#faf9f6; --text:#333; --border:#e0dcd4; --accent:#d4a574;
@@ -62,36 +62,36 @@ body{font:16px/1.8 'Georgia','Noto Serif SC',serif;background:var(--bg);color:va
 
 <div id="app">
   <div id="toolbar">
-    <button onclick="openSettings()" title="è®¾ç½®">â è®¾ç½®</button>
-    <button onclick="toggleTheme()" title="ä¸»é¢">ð</button>
-    <button onclick="loadRemote()" title="ä»äºç«¯æå">â æå</button>
-    <button onclick="saveRemote()" title="ä¿å­å°äºç«¯">ð¾ ä¿å­</button>
-    <span id="wordCount">0 å­</span>
+    <button onclick="openSettings()" title="设置">⚙ 设置</button>
+    <button onclick="toggleTheme()" title="主题">🌓</button>
+    <button onclick="loadRemote()" title="从云端拉取">☁ 拉取</button>
+    <button onclick="saveRemote()" title="保存到云端">💾 保存</button>
+    <span id="wordCount">0 字</span>
     <span id="saveStatus"></span>
   </div>
-  <textarea id="title" placeholder="æ é¢..." rows="1"></textarea>
-  <textarea id="editor" placeholder="å¼å§åä½..." rows="20"></textarea>
+  <textarea id="title" placeholder="标题..." rows="1"></textarea>
+  <textarea id="editor" placeholder="开始写作..." rows="20"></textarea>
 </div>
 
 <div id="settingsOverlay">
   <div id="settingsPanel">
-    <h3>GitHub éç½®</h3>
+    <h3>GitHub 配置</h3>
     <label>GitHub Token</label>
     <input id="cfgToken" type="password" placeholder="ghp_xxx...">
-    <label>ä»åºææè</label>
+    <label>仓库所有者</label>
     <input id="cfgOwner" placeholder="wangyongshun199910">
-    <label>ä»åºå</label>
+    <label>仓库名</label>
     <input id="cfgRepo" placeholder="writer">
-    <label>åæ¯</label>
+    <label>分支</label>
     <input id="cfgBranch" value="main">
-    <label>æä»¶è·¯å¾</label>
+    <label>文件路径</label>
     <input id="cfgPath" placeholder="novel.md">
     <div class="btns">
-      <button class="btnCancel" onclick="closeSettings()">åæ¶</button>
-      <button class="btnPrimary" onclick="saveSettings()">ä¿å­éç½®</button>
+      <button class="btnCancel" onclick="closeSettings()">取消</button>
+      <button class="btnPrimary" onclick="saveSettings()">保存配置</button>
     </div>
     <div style="margin-top:12px;font-size:12px;color:#999;text-align:center">
-      Token éè¦ <code>repo</code> æé | <a href="https://github.com/settings/tokens/new" target="_blank" style="color:var(--accent)">åå»º Token</a>
+      Token 需要 <code>repo</code> 权限 | <a href="https://github.com/settings/tokens/new" target="_blank" style="color:var(--accent)">创建 Token</a>
     </div>
   </div>
 </div>
@@ -140,7 +140,7 @@ function saveSettings(){
   };
   setConfig(c);
   closeSettings();
-  toast('éç½®å·²ä¿å­');
+  toast('配置已保存');
 }
 
 function toggleTheme(){
@@ -165,8 +165,8 @@ function setStatus(text, cls){
 async function githubAPI(method, url, body){
   let cfg = getConfig();
   if(!cfg.token || !cfg.owner || !cfg.repo){
-    toast('è¯·åéç½® GitHub Token åä»åºä¿¡æ¯');
-    throw new Error('æªéç½®');
+    toast('请先配置 GitHub Token 和仓库信息');
+    throw new Error('未配置');
   }
   let api = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`;
   let headers = {
@@ -194,7 +194,7 @@ async function saveRemote(){
   let content = document.getElementById('editor').value;
 
   if(!title && !content){
-    toast('åå®¹ä¸ºç©ºï¼æ éä¿å­');
+    toast('内容为空，无需保存');
     return;
   }
 
@@ -202,7 +202,7 @@ async function saveRemote(){
   if(title) text += '# ' + title + '\n\n';
   text += content;
 
-  setStatus('ä¿å­ä¸­...', 'saving');
+  setStatus('保存中...', 'saving');
 
   try{
     let cfg = getConfig();
@@ -228,18 +228,18 @@ async function saveRemote(){
     lastSavedContent = content;
     lastSavedTitle = title;
     dirty = false;
-    setStatus('â å·²ä¿å­', 'saved');
-    toast('å·²ä¿å­å° GitHub');
+    setStatus('✓ 已保存', 'saved');
+    toast('已保存到 GitHub');
     setTimeout(()=>setStatus(''), 3000);
   }catch(e){
-    setStatus('ä¿å­å¤±è´¥', 'error');
-    toast('ä¿å­å¤±è´¥: ' + e.message, 3000);
+    setStatus('保存失败', 'error');
+    toast('保存失败: ' + e.message, 3000);
   }
 }
 
 // ===== Load =====
 async function loadRemote(){
-  setStatus('å è½½ä¸­...', 'saving');
+  setStatus('加载中...', 'saving');
   try{
     let data = await githubAPI('GET');
     let text = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
@@ -257,12 +257,12 @@ async function loadRemote(){
     dirty = false;
     autoResize();
     updateWordCount();
-    setStatus('â å·²å è½½', 'saved');
-    toast('å·²ä» GitHub å è½½');
+    setStatus('✓ 已加载', 'saved');
+    toast('已从 GitHub 加载');
     setTimeout(()=>setStatus(''), 3000);
   }catch(e){
-    setStatus('å è½½å¤±è´¥', 'error');
-    toast('å è½½å¤±è´¥: ' + e.message, 3000);
+    setStatus('加载失败', 'error');
+    toast('加载失败: ' + e.message, 3000);
   }
 }
 
@@ -270,7 +270,7 @@ async function loadRemote(){
 function onContentChange(){
   updateWordCount();
   dirty = true;
-  setStatus('â æªä¿å­', '');
+  setStatus('● 未保存', '');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(autoSave, 3000);
 }
@@ -281,7 +281,7 @@ async function autoSave(){
   let content = document.getElementById('editor').value;
   if(title === lastSavedTitle && content === lastSavedContent) return;
 
-  setStatus('èªå¨ä¿å­...', 'saving');
+  setStatus('自动保存...', 'saving');
   try{
     let cfg = getConfig();
     if(!cfg.token) { setStatus(''); return; }
@@ -308,10 +308,10 @@ async function autoSave(){
     lastSavedContent = content;
     lastSavedTitle = title;
     dirty = false;
-    setStatus('â å·²ä¿å­', 'saved');
+    setStatus('✓ 已保存', 'saved');
     setTimeout(()=>setStatus(''), 3000);
   }catch(e){
-    setStatus('ä¿å­å¤±è´¥', 'error');
+    setStatus('保存失败', 'error');
   }
 }
 
@@ -320,7 +320,7 @@ function updateWordCount(){
   let text = document.getElementById('editor').value;
   let cn = (text.match(/[\u4e00-\u9fff]/g)||[]).length;
   let en = (text.match(/[a-zA-Z]+/g)||[]).length;
-  document.getElementById('wordCount').textContent = (cn+en) + ' å­';
+  document.getElementById('wordCount').textContent = (cn+en) + ' 字';
 }
 
 // ===== Auto Resize =====
