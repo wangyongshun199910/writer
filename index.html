@@ -15,11 +15,12 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font:16px/1.8 'Georgia','Noto Serif SC',serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}
-#app{max-width:720px;margin:0 auto;padding:20px 16px 60px}
+#app{max-width:720px;margin:0 auto;padding:20px 16px 120px}
 
-#toolbar{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap}
-#toolbar button{background:none;border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:4px;font-size:13px;cursor:pointer;transition:all .2s}
-#toolbar button:hover{border-color:var(--accent);color:var(--accent)}
+/* Top bar */
+#topbar{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:20px}
+#topbar button{background:none;border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:4px;font-size:13px;cursor:pointer;transition:all .2s}
+#topbar button:hover{border-color:var(--accent);color:var(--accent)}
 #saveStatus{font-size:12px;color:#999;margin-left:auto;white-space:nowrap}
 #saveStatus.saving{color:#c8945a}
 #saveStatus.saved{color:#6a9}
@@ -31,20 +32,42 @@ body{font:16px/1.8 'Georgia','Noto Serif SC',serif;background:var(--bg);color:va
 
 #editor{width:100%;min-height:50vh;border:none;outline:none;background:transparent;color:var(--text);font:16px/1.8 'Georgia','Noto Serif SC',serif;resize:none;overflow-y:hidden}
 #editor::placeholder{color:#ccc}
+
+/* Bottom bar - always visible */
+#bottombar{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;z-index:50}
+#bottombar button{flex:1;padding:10px;border:none;border-radius:6px;font-size:15px;cursor:pointer;transition:all .2s;max-width:120px}
+#btnSave{background:var(--accent);color:#fff;font-weight:bold}
+#btnSave:active{opacity:.8}
+#btnLoad{background:var(--border);color:var(--text)}
+#btnTheme{background:var(--border);color:var(--text);flex:0;padding:10px 14px;max-width:44px}
+#bottomWordCount{font-size:13px;color:#999;margin-left:auto;white-space:nowrap}
+#bottomStatus{font-size:12px;color:#999}
+#bottomStatus.saving{color:#c8945a}
+#bottomStatus.saved{color:#6a9}
+#bottomStatus.error{color:#d66}
+
+@media(min-width:768px){
+  #bottombar{left:50%;right:auto;transform:translateX(-50%);width:720px;border-radius:8px 8px 0 0;padding:10px 20px;bottom:0}
+}
 </style>
 </head>
 <body>
 
 <div id="app">
-  <div id="toolbar">
-    <button onclick="toggleTheme()">🌓</button>
-    <button onclick="loadRemote()">☁ 拉取</button>
-    <button onclick="saveNow()">💾 保存</button>
-    <span id="wordCount">0 字</span>
+  <div id="topbar">
     <span id="saveStatus"></span>
+    <span id="wordCount">0 字</span>
   </div>
   <textarea id="title" placeholder="标题..." rows="1"></textarea>
   <textarea id="editor" placeholder="开始写作..." rows="20"></textarea>
+</div>
+
+<div id="bottombar">
+  <button id="btnTheme" onclick="toggleTheme()">🌓</button>
+  <span id="bottomStatus"></span>
+  <span id="bottomWordCount">0 字</span>
+  <button id="btnLoad" onclick="loadRemote()">☁ 拉取</button>
+  <button id="btnSave" onclick="saveNow()">保存</button>
 </div>
 
 <script>
@@ -65,6 +88,7 @@ function saveNow(){
   var title=document.getElementById("title").value.trim();
   var content=document.getElementById("editor").value;
   if(!title&&!content)return;
+  if(title===lastTitle&&content===lastContent)return;
   var text="";if(title)text+="# "+title+"\n\n";text+=content;
   setStatus("保存中...","saving");
   var sha=null;
@@ -79,7 +103,7 @@ function doSave(text,sha){
     lastTitle=document.getElementById("title").value;
     dirty=false;
     setStatus("✓ 已保存","saved");
-    setTimeout(function(){setStatus("");},3000);
+    setTimeout(function(){setStatus("");},4000);
   }).catch(function(e){setStatus("保存失败","error");});
 }
 
@@ -95,7 +119,7 @@ function loadRemote(){
     lastTitle=title;lastContent=content;dirty=false;
     autoResize();updateWordCount();
     setStatus("✓ 已加载","saved");
-    setTimeout(function(){setStatus("");},3000);
+    setTimeout(function(){setStatus("");},4000);
   }).catch(function(e){setStatus("加载失败","error");});
 }
 
@@ -105,19 +129,23 @@ function onChange(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(function(){
     if(!dirty)return;
-    var title=document.getElementById("title").value;
-    var content=document.getElementById("editor").value;
-    if(title===lastTitle&&content===lastContent)return;
     saveNow();
-  },3000);
+  },5000);
 }
 
-function setStatus(text,cls){var s=document.getElementById("saveStatus");s.textContent=text;s.className=cls||"";}
+function setStatus(text,cls){
+  var s1=document.getElementById("saveStatus");
+  var s2=document.getElementById("bottomStatus");
+  s1.textContent=text;s1.className=cls||"";
+  s2.textContent=text;s2.className=cls||"";
+}
 function updateWordCount(){
   var text=document.getElementById("editor").value;
   var cn=(text.match(/[\u4e00-\u9fff]/g)||[]).length;
   var en=(text.match(/[a-zA-Z]+/g)||[]).length;
-  document.getElementById("wordCount").textContent=(cn+en)+" 字";
+  var wc=(cn+en)+" 字";
+  document.getElementById("wordCount").textContent=wc;
+  document.getElementById("bottomWordCount").textContent=wc;
 }
 function autoResize(){
   var el=document.getElementById("editor");
