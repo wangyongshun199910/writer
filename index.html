@@ -15,9 +15,21 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font:16px/1.8 'Georgia','Noto Serif SC',serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}
-#app{max-width:720px;margin:0 auto;padding:20px 16px 120px}
 
-/* Top bar */
+/* Login overlay */
+#loginOverlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100}
+#loginCard{background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:36px 28px;width:90%;max-width:360px;text-align:center;box-shadow:0 4px 24px var(--shadow)}
+#loginCard h1{font:bold 26px 'Georgia',serif;color:var(--accent);margin-bottom:6px;letter-spacing:2px}
+#loginCard p.desc{font-size:13px;color:#999;margin-bottom:24px}
+#loginCard input{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:8px;font-size:16px;background:var(--bg);color:var(--text);outline:none;text-align:center;letter-spacing:4px;transition:border .2s}
+#loginCard input:focus{border-color:var(--accent)}
+#loginCard button{width:100%;padding:11px;margin-top:14px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-size:15px;font-weight:bold;cursor:pointer;transition:opacity .2s}
+#loginCard button:active{opacity:.8}
+#loginError{color:#d66;font-size:13px;margin-top:10px;min-height:20px}
+
+/* Editor */
+#app{max-width:720px;margin:0 auto;padding:20px 16px 120px;display:none}
+
 #topbar{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:20px}
 #topbar button{background:none;border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:4px;font-size:13px;cursor:pointer;transition:all .2s}
 #topbar button:hover{border-color:var(--accent);color:var(--accent)}
@@ -33,7 +45,6 @@ body{font:16px/1.8 'Georgia','Noto Serif SC',serif;background:var(--bg);color:va
 #editor{width:100%;min-height:50vh;border:none;outline:none;background:transparent;color:var(--text);font:16px/1.8 'Georgia','Noto Serif SC',serif;resize:none;overflow-y:hidden}
 #editor::placeholder{color:#ccc}
 
-/* Bottom bar - always visible */
 #bottombar{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;z-index:50}
 #bottombar button{flex:1;padding:10px;border:none;border-radius:6px;font-size:15px;cursor:pointer;transition:all .2s;max-width:120px}
 #btnSave{background:var(--accent);color:#fff;font-weight:bold}
@@ -49,10 +60,25 @@ body{font:16px/1.8 'Georgia','Noto Serif SC',serif;background:var(--bg);color:va
 @media(min-width:768px){
   #bottombar{left:50%;right:auto;transform:translateX(-50%);width:720px;border-radius:8px 8px 0 0;padding:10px 20px;bottom:0}
 }
+
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 </style>
 </head>
 <body>
 
+<!-- Login -->
+<div id="loginOverlay">
+  <div id="loginCard">
+    <h1>Writer</h1>
+    <p class="desc">云端写作 · 私人空间</p>
+    <input type="password" id="pwInput" placeholder="输入密码" autocomplete="off">
+    <button id="loginBtn">进入</button>
+    <p id="loginError"></p>
+  </div>
+</div>
+
+<!-- Editor -->
 <div id="app">
   <div id="topbar">
     <span id="saveStatus"></span>
@@ -71,11 +97,85 @@ body{font:16px/1.8 'Georgia','Noto Serif SC',serif;background:var(--bg);color:va
 </div>
 
 <script>
-var a="ghp_1OEnNqfWGlA4uBCpTKswGC",b="v6hmBEGq2sohlx";
-var CFG={token:a+b,owner:"wangyongshun199910",repo:"writer",branch:"main",path:"novel.md"};
+// ============================================================
+// Encrypted GitHub Token (AES-256-GCM + PBKDF2-SHA256)
+// Cannot be read by crawlers — only decryptable with password
+// ============================================================
+var ENC={salt:"qWqf4hw7OfyWQiS1W1DHHQ==",iv:"L9ADvK1y4kz13L3v",enc:"UhE2Qz3lxTzoyExgy/xCD6VgO1xVrtUAROZFkigPXO8OnKlaVzCkMNALR5igtkXc2UPha3ULKzg=",iter:600000};
+var PW_HASH="0a42b8f38c2c1b24ac890f9f72abb8a186160e9a7e909237a84734660154487b";
 
+var CFG={owner:"wangyongshun199910",repo:"writer",branch:"main",path:"novel.md",token:""};
 var saveTimer=null,lastContent="",lastTitle="",dirty=false;
 
+// ---- Crypto helpers ----
+function b64ToBuf(b64){return Uint8Array.from(atob(b64),function(c){return c.charCodeAt(0)}).buffer}
+function bufToHex(buf){return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,"0")}).join("")}
+
+async function sha256(text){
+  var enc=new TextEncoder().encode(text);
+  var hash=await crypto.subtle.digest("SHA-256",enc);
+  return bufToHex(hash);
+}
+
+async function decryptToken(password){
+  var salt=b64ToBuf(ENC.salt);
+  var iv=b64ToBuf(ENC.iv);
+  var ct=b64ToBuf(ENC.enc);
+  var pwEnc=new TextEncoder().encode(password);
+  var keyMat=await crypto.subtle.importKey("raw",pwEnc,"PBKDF2",false,["deriveBits"]);
+  var dk=await crypto.subtle.deriveBits({name:"PBKDF2",salt:salt,iterations:ENC.iter,hash:"SHA-256"},keyMat,256);
+  var aesKey=await crypto.subtle.importKey("raw",dk,"AES-GCM",false,["decrypt"]);
+  var pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:iv},aesKey,ct);
+  return new TextDecoder().decode(pt);
+}
+
+// ---- Login ----
+async function doLogin(){
+  var pw=document.getElementById("pwInput").value;
+  if(!pw){showError("请输入密码");return;}
+  var hash=await sha256(pw);
+  if(hash!==PW_HASH){showError("密码错误");return;}
+  try{
+    var token=await decryptToken(pw);
+    CFG.token=token;
+    sessionStorage.setItem("writer_token",token);
+    document.getElementById("loginOverlay").style.display="none";
+    document.getElementById("app").style.display="block";
+    if(localStorage.getItem("writer_dark")==="true")document.body.classList.add("dark");
+    updateWordCount();autoResize();
+    loadRemote();
+  }catch(e){
+    showError("解密失败，请重试");
+    console.error(e);
+  }
+}
+
+function showError(msg){
+  var el=document.getElementById("loginError");
+  el.textContent=msg;
+  var card=document.getElementById("loginCard");
+  card.classList.remove("shake");void card.offsetWidth;card.classList.add("shake");
+}
+
+document.getElementById("loginBtn").addEventListener("click",doLogin);
+document.getElementById("pwInput").addEventListener("keydown",function(e){
+  if(e.key==="Enter")doLogin();
+});
+
+// ---- Auto-login if session exists ----
+(function(){
+  var tok=sessionStorage.getItem("writer_token");
+  if(tok){
+    CFG.token=tok;
+    document.getElementById("loginOverlay").style.display="none";
+    document.getElementById("app").style.display="block";
+    if(localStorage.getItem("writer_dark")==="true")document.body.classList.add("dark");
+    updateWordCount();autoResize();
+    loadRemote();
+  }
+})();
+
+// ---- GitHub API ----
 function api(method,body){
   var url="https://api.github.com/repos/"+CFG.owner+"/"+CFG.repo+"/contents/"+CFG.path;
   var h={"Authorization":"Bearer "+CFG.token,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};
@@ -160,10 +260,6 @@ function toggleTheme(){
 document.getElementById("title").addEventListener("input",onChange);
 document.getElementById("editor").addEventListener("input",function(){onChange();autoResize();});
 document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();saveNow();}});
-
-if(localStorage.getItem("writer_dark")==="true")document.body.classList.add("dark");
-updateWordCount();autoResize();
-loadRemote();
 </script>
 </body>
 </html>
