@@ -59,6 +59,7 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
 #chIndicator{font-size:11px;color:var(--accent);margin-right:6px;white-space:nowrap}
 
 /* Font size slider popup */
+#btnTheme{background:none;border:none;font-size:20px;cursor:pointer;padding:0 4px;line-height:1}
 #fontPopup{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:12px 18px;display:none;z-index:60;gap:10px;align-items:center;box-shadow:0 4px 16px var(--shadow)}
 #fontPopup input[type=range]{width:120px}
 #fontPopup span{font-size:13px;color:var(--text);min-width:40px;text-align:center}
@@ -87,6 +88,7 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
 <!-- Editor -->
 <div id="app">
   <div id="topbar">
+    <button id="btnTheme" onclick="toggleTheme()" title="日/夜模式">🌓</button>
     <span id="chapterLabel"></span>
     <span class="sep"></span>
     <span id="saveStatus"></span>
