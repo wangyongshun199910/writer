@@ -15,6 +15,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font:16px/1.8 'Georgia','Noto Serif SC',serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}
+body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
 
 /* Login overlay */
 #loginOverlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100}
@@ -30,35 +31,40 @@ body{font:16px/1.8 'Georgia','Noto Serif SC',serif;background:var(--bg);color:va
 /* Editor */
 #app{max-width:720px;margin:0 auto;padding:20px 16px 120px;display:none}
 
-#topbar{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:20px}
-#topbar button{background:none;border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:4px;font-size:13px;cursor:pointer;transition:all .2s}
-#topbar button:hover{border-color:var(--accent);color:var(--accent)}
-#saveStatus{font-size:12px;color:#999;margin-left:auto;white-space:nowrap}
+#topbar{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:12px;flex-wrap:wrap}
+#topbar .sep{flex:1}
+#chapterLabel{font-size:13px;color:var(--accent);font-weight:bold;white-space:nowrap}
+#saveStatus{font-size:12px;color:#999;white-space:nowrap;margin-left:auto}
 #saveStatus.saving{color:#c8945a}
 #saveStatus.saved{color:#6a9}
 #saveStatus.error{color:#d66}
-#wordCount{font-size:12px;color:#999}
+#wordCount{font-size:12px;color:#999;white-space:nowrap}
 
-#title{width:100%;font:bold 28px/1.4 'Georgia','Noto Serif SC',serif;border:none;outline:none;background:transparent;color:var(--text);padding:8px 0;margin-bottom:16px;resize:none}
-#title::placeholder{color:#bbb}
+#chTitleInput{width:100%;font:bold 24px/1.4 'Georgia','Noto Serif SC',serif;border:none;outline:none;background:transparent;color:var(--text);padding:4px 0;margin-bottom:10px;resize:none}
+#chTitleInput::placeholder{color:#bbb}
 
-#editor{width:100%;min-height:50vh;border:none;outline:none;background:transparent;color:var(--text);font:16px/1.8 'Georgia','Noto Serif SC',serif;resize:none;overflow-y:hidden}
+#editor{width:100%;min-height:50vh;border:none;outline:none;background:transparent;color:var(--text);font-size:16px;line-height:1.8;font-family:'Georgia','Noto Serif SC',serif;resize:none;overflow-y:hidden}
 #editor::placeholder{color:#ccc}
 
-#bottombar{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;z-index:50}
-#bottombar button{flex:1;padding:10px;border:none;border-radius:6px;font-size:15px;cursor:pointer;transition:all .2s;max-width:120px}
-#btnSave{background:var(--accent);color:#fff;font-weight:bold}
-#btnSave:active{opacity:.8}
-#btnLoad{background:var(--border);color:var(--text)}
-#btnTheme{background:var(--border);color:var(--text);flex:0;padding:10px 14px;max-width:44px}
-#bottomWordCount{font-size:13px;color:#999;margin-left:auto;white-space:nowrap}
-#bottomStatus{font-size:12px;color:#999}
+/* Bottom bar */
+#bottombar{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:6px;z-index:50}
+#bottombar button{flex:1;padding:8px 4px;border:none;border-radius:6px;font-size:13px;cursor:pointer;transition:all .2s;max-width:80px;background:var(--border);color:var(--text)}
+#bottombar button.accent{background:var(--accent);color:#fff}
+#bottombar button:active{opacity:.8}
+#bottombar button.locked{background:#6a9;color:#fff}
+#bottomStatus{font-size:11px;color:#999;margin-left:auto;margin-right:4px;white-space:nowrap}
 #bottomStatus.saving{color:#c8945a}
 #bottomStatus.saved{color:#6a9}
 #bottomStatus.error{color:#d66}
+#chIndicator{font-size:11px;color:var(--accent);margin-right:6px;white-space:nowrap}
+
+/* Font size slider popup */
+#fontPopup{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:12px 18px;display:none;z-index:60;gap:10px;align-items:center;box-shadow:0 4px 16px var(--shadow)}
+#fontPopup input[type=range]{width:120px}
+#fontPopup span{font-size:13px;color:var(--text);min-width:40px;text-align:center}
 
 @media(min-width:768px){
-  #bottombar{left:50%;right:auto;transform:translateX(-50%);width:720px;border-radius:8px 8px 0 0;padding:10px 20px;bottom:0}
+  #bottombar{left:50%;right:auto;transform:translateX(-50%);width:720px;border-radius:8px 8px 0 0;padding:8px 16px}
 }
 
 .shake{animation:shake .4s}
@@ -81,46 +87,51 @@ body{font:16px/1.8 'Georgia','Noto Serif SC',serif;background:var(--bg);color:va
 <!-- Editor -->
 <div id="app">
   <div id="topbar">
+    <span id="chapterLabel"></span>
+    <span class="sep"></span>
     <span id="saveStatus"></span>
     <span id="wordCount">0 字</span>
   </div>
-  <textarea id="title" placeholder="标题..." rows="1"></textarea>
+  <textarea id="chTitleInput" placeholder="章节标题..." rows="1"></textarea>
   <textarea id="editor" placeholder="开始写作..." rows="20"></textarea>
 </div>
 
 <div id="bottombar">
-  <button id="btnTheme" onclick="toggleTheme()">🌓</button>
+  <button id="btnPrev" title="上一章">◀</button>
+  <button id="btnNext" title="下一章">▶</button>
+  <span id="chIndicator"></span>
   <span id="bottomStatus"></span>
-  <span id="bottomWordCount">0 字</span>
-  <button id="btnLoad" onclick="loadRemote()">☁ 拉取</button>
-  <button id="btnSave" onclick="saveNow()">保存</button>
+  <button id="btnFont" onclick="toggleFontPopup()">A</button>
+  <button id="btnLock" onclick="toggleZoomLock()">🔓</button>
+  <button id="btnLoad" onclick="loadRemote()">拉取</button>
+  <button id="btnSave" class="accent" onclick="saveNow()">保存</button>
+</div>
+
+<div id="fontPopup">
+  <span>A-</span>
+  <input type="range" id="fontSlider" min="12" max="28" value="16" step="1">
+  <span>A+</span>
 </div>
 
 <script>
 // ============================================================
-// Encrypted GitHub Token (AES-256-GCM + PBKDF2-SHA256)
-// Cannot be read by crawlers — only decryptable with password
+// Encrypted config (AES-256-GCM + PBKDF2-SHA256)
 // ============================================================
 var ENC={salt:"qWqf4hw7OfyWQiS1W1DHHQ==",iv:"L9ADvK1y4kz13L3v",enc:"UhE2Qz3lxTzoyExgy/xCD6VgO1xVrtUAROZFkigPXO8OnKlaVzCkMNALR5igtkXc2UPha3ULKzg=",iter:600000};
 var PW_HASH="0a42b8f38c2c1b24ac890f9f72abb8a186160e9a7e909237a84734660154487b";
 
 var CFG={owner:"wangyongshun199910",repo:"writer",branch:"main",path:"novel.md",token:""};
-var saveTimer=null,lastContent="",lastTitle="",dirty=false;
+var saveTimer=null,lastFullContent="",dirty=false;
+var chapters=[],chIdx=0;
+var localTitle="";
+var zoomLocked=false;
 
-// ---- Crypto helpers ----
+// ---- Crypto ----
 function b64ToBuf(b64){return Uint8Array.from(atob(b64),function(c){return c.charCodeAt(0)}).buffer}
 function bufToHex(buf){return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,"0")}).join("")}
-
-async function sha256(text){
-  var enc=new TextEncoder().encode(text);
-  var hash=await crypto.subtle.digest("SHA-256",enc);
-  return bufToHex(hash);
-}
-
+async function sha256(text){var enc=new TextEncoder().encode(text);var hash=await crypto.subtle.digest("SHA-256",enc);return bufToHex(hash);}
 async function decryptToken(password){
-  var salt=b64ToBuf(ENC.salt);
-  var iv=b64ToBuf(ENC.iv);
-  var ct=b64ToBuf(ENC.enc);
+  var salt=b64ToBuf(ENC.salt),iv=b64ToBuf(ENC.iv),ct=b64ToBuf(ENC.enc);
   var pwEnc=new TextEncoder().encode(password);
   var keyMat=await crypto.subtle.importKey("raw",pwEnc,"PBKDF2",false,["deriveBits"]);
   var dk=await crypto.subtle.deriveBits({name:"PBKDF2",salt:salt,iterations:ENC.iter,hash:"SHA-256"},keyMat,256);
@@ -139,41 +150,120 @@ async function doLogin(){
     var token=await decryptToken(pw);
     CFG.token=token;
     sessionStorage.setItem("writer_token",token);
-    document.getElementById("loginOverlay").style.display="none";
-    document.getElementById("app").style.display="block";
-    if(localStorage.getItem("writer_dark")==="true")document.body.classList.add("dark");
-    updateWordCount();autoResize();
-    loadRemote();
-  }catch(e){
-    showError("解密失败，请重试");
-    console.error(e);
-  }
+    enterEditor();
+  }catch(e){showError("解密失败");}
 }
-
 function showError(msg){
-  var el=document.getElementById("loginError");
-  el.textContent=msg;
+  var el=document.getElementById("loginError");el.textContent=msg;
   var card=document.getElementById("loginCard");
   card.classList.remove("shake");void card.offsetWidth;card.classList.add("shake");
 }
-
 document.getElementById("loginBtn").addEventListener("click",doLogin);
-document.getElementById("pwInput").addEventListener("keydown",function(e){
-  if(e.key==="Enter")doLogin();
-});
+document.getElementById("pwInput").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
 
-// ---- Auto-login if session exists ----
-(function(){
-  var tok=sessionStorage.getItem("writer_token");
-  if(tok){
-    CFG.token=tok;
-    document.getElementById("loginOverlay").style.display="none";
-    document.getElementById("app").style.display="block";
-    if(localStorage.getItem("writer_dark")==="true")document.body.classList.add("dark");
-    updateWordCount();autoResize();
-    loadRemote();
+// ---- Chapter logic ----
+function parseChapters(raw){
+  if(!raw)return [{title:"",content:""}];
+  var result=[];
+  var lines=raw.split(/\n/);
+  var buf=[],curTitle="";
+  for(var i=0;i<lines.length;i++){
+    var m=lines[i].match(/^##\s+(.+)/);
+    if(m){
+      if(buf.length>0||curTitle){
+        result.push({title:curTitle,content:buf.join("\n").trim()});
+      }
+      curTitle=m[1];buf=[];
+    }else{
+      buf.push(lines[i]);
+    }
   }
-})();
+  result.push({title:curTitle,content:buf.join("\n").trim()});
+  if(result.length===1&&!result[0].title&&!result[0].content)return [{title:"",content:""}];
+  return result;
+}
+function packChapters(){
+  var parts=[];
+  for(var i=0;i<chapters.length;i++){
+    var ch=chapters[i];
+    if(ch.title)parts.push("## "+ch.title);
+    if(ch.content)parts.push(ch.content);
+  }
+  return parts.join("\n").trim()+"\n";
+}
+function saveCurChapter(){
+  var title=document.getElementById("chTitleInput").value.trim();
+  var content=document.getElementById("editor").value;
+  chapters[chIdx]={title:title,content:content};
+}
+function loadChapter(idx){
+  saveCurChapter();
+  chIdx=Math.max(0,Math.min(idx,chapters.length-1));
+  var ch=chapters[chIdx];
+  document.getElementById("chTitleInput").value=ch.title||"";
+  document.getElementById("editor").value=ch.content||"";
+  updateChapterUI();
+  autoResize();
+  updateWordCount();
+}
+function newChapter(){
+  saveCurChapter();
+  chapters.push({title:"",content:""});
+  chIdx=chapters.length-1;
+  document.getElementById("chTitleInput").value="";
+  document.getElementById("editor").value="";
+  updateChapterUI();
+  autoResize();
+  updateWordCount();
+  dirty=true;onChange();
+}
+function updateChapterUI(){
+  var t=chIdx+1+"/"+chapters.length;
+  document.getElementById("chIndicator").textContent=t;
+  document.getElementById("chapterLabel").textContent=chapters[chIdx]&&chapters[chIdx].title?"第"+(chIdx+1)+"章 · "+chapters[chIdx].title:t;
+  document.getElementById("btnPrev").style.opacity=chIdx===0?"0.3":"1";
+  document.getElementById("btnNext").style.opacity=chIdx>=chapters.length-1?"0.3":"1";
+}
+
+// ---- Zoom Lock ----
+function toggleZoomLock(){
+  zoomLocked=!zoomLocked;
+  var btn=document.getElementById("btnLock");
+  if(zoomLocked){
+    document.body.classList.add("zoom-locked");
+    btn.textContent="🔒";
+    btn.classList.add("locked");
+    document.addEventListener("touchmove",preventPinch,{passive:false});
+    document.addEventListener("gesturestart",preventGesture);
+    document.addEventListener("gesturechange",preventGesture);
+    document.addEventListener("gestureend",preventGesture);
+  }else{
+    document.body.classList.remove("zoom-locked");
+    btn.textContent="🔓";
+    btn.classList.remove("locked");
+    document.removeEventListener("touchmove",preventPinch);
+    document.removeEventListener("gesturestart",preventGesture);
+    document.removeEventListener("gesturechange",preventGesture);
+    document.removeEventListener("gestureend",preventGesture);
+  }
+  localStorage.setItem("writer_zoomLock",zoomLocked?"1":"0");
+}
+function preventPinch(e){
+  if(e.touches&&e.touches.length>1)e.preventDefault();
+}
+function preventGesture(e){e.preventDefault();}
+
+// ---- Font size ----
+function applyFontSize(v){
+  document.getElementById("editor").style.fontSize=v+"px";
+  document.getElementById("chTitleInput").style.fontSize=(parseInt(v)+8)+"px";
+  document.getElementById("fontSlider").value=v;
+  localStorage.setItem("writer_fontSize",v);
+}
+function toggleFontPopup(){
+  var pop=document.getElementById("fontPopup");
+  pop.style.display=pop.style.display==="flex"?"none":"flex";
+}
 
 // ---- GitHub API ----
 function api(method,body){
@@ -185,23 +275,19 @@ function api(method,body){
 }
 
 function saveNow(){
-  var title=document.getElementById("title").value.trim();
-  var content=document.getElementById("editor").value;
-  if(!title&&!content)return;
-  if(title===lastTitle&&content===lastContent)return;
-  var text="";if(title)text+="# "+title+"\n\n";text+=content;
+  saveCurChapter();
+  var full=packChapters();
+  if(!full.trim())return;
+  if(full===lastFullContent)return;
   setStatus("保存中...","saving");
   var sha=null;
-  api("GET").then(function(d){sha=d.sha;return doSave(text,sha);}).catch(function(){return doSave(text,null);});
+  api("GET").then(function(d){sha=d.sha;return doSave(full,sha);}).catch(function(){return doSave(full,null);});
 }
-
 function doSave(text,sha){
   var body={message:"Update "+CFG.path,content:btoa(unescape(encodeURIComponent(text))),branch:CFG.branch};
   if(sha)body.sha=sha;
   api("PUT",body).then(function(){
-    lastContent=document.getElementById("editor").value;
-    lastTitle=document.getElementById("title").value;
-    dirty=false;
+    lastFullContent=text;dirty=false;
     setStatus("✓ 已保存","saved");
     setTimeout(function(){setStatus("");},4000);
   }).catch(function(e){setStatus("保存失败","error");});
@@ -211,41 +297,38 @@ function loadRemote(){
   setStatus("加载中...","saving");
   api("GET").then(function(d){
     var text=decodeURIComponent(escape(atob(d.content.replace(/\n/g,""))));
-    var title="",content=text;
-    var m=text.match(/^#\s+(.+?)\n+/);
-    if(m){title=m[1];content=text.substring(m[0].length);}
-    document.getElementById("title").value=title;
-    document.getElementById("editor").value=content;
-    lastTitle=title;lastContent=content;dirty=false;
-    autoResize();updateWordCount();
+    lastFullContent=text;
+    chapters=parseChapters(text);
+    chIdx=0;
+    if(chapters.length===0)chapters=[{title:"",content:""}];
+    loadChapter(0);
+    updateChapterUI();
     setStatus("✓ 已加载","saved");
     setTimeout(function(){setStatus("");},4000);
   }).catch(function(e){setStatus("加载失败","error");});
 }
 
 function onChange(){
-  updateWordCount();dirty=true;
+  saveCurChapter();
+  updateWordCount();
+  updateChapterUI();
+  dirty=true;
   setStatus("● 未保存","");
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(function(){
-    if(!dirty)return;
-    saveNow();
-  },5000);
+  saveTimer=setTimeout(function(){if(!dirty)return;saveNow();},5000);
 }
 
 function setStatus(text,cls){
-  var s1=document.getElementById("saveStatus");
-  var s2=document.getElementById("bottomStatus");
-  s1.textContent=text;s1.className=cls||"";
-  s2.textContent=text;s2.className=cls||"";
+  document.getElementById("saveStatus").textContent=text;
+  document.getElementById("saveStatus").className=cls||"";
+  document.getElementById("bottomStatus").textContent=text;
+  document.getElementById("bottomStatus").className=cls||"";
 }
 function updateWordCount(){
   var text=document.getElementById("editor").value;
   var cn=(text.match(/[\u4e00-\u9fff]/g)||[]).length;
   var en=(text.match(/[a-zA-Z]+/g)||[]).length;
-  var wc=(cn+en)+" 字";
-  document.getElementById("wordCount").textContent=wc;
-  document.getElementById("bottomWordCount").textContent=wc;
+  document.getElementById("wordCount").textContent=(cn+en)+" 字";
 }
 function autoResize(){
   var el=document.getElementById("editor");
@@ -257,9 +340,36 @@ function toggleTheme(){
   localStorage.setItem("writer_dark",document.body.classList.contains("dark"));
 }
 
-document.getElementById("title").addEventListener("input",onChange);
+// ---- Init editor ----
+function enterEditor(){
+  document.getElementById("loginOverlay").style.display="none";
+  document.getElementById("app").style.display="block";
+  if(localStorage.getItem("writer_dark")==="true")document.body.classList.add("dark");
+  applyFontSize(localStorage.getItem("writer_fontSize")||16);
+  if(localStorage.getItem("writer_zoomLock")==="1")toggleZoomLock();
+  loadRemote();
+}
+
+// ---- Events ----
+document.getElementById("chTitleInput").addEventListener("input",onChange);
 document.getElementById("editor").addEventListener("input",function(){onChange();autoResize();});
+document.getElementById("fontSlider").addEventListener("input",function(){applyFontSize(this.value);});
+document.getElementById("btnPrev").addEventListener("click",function(){if(chIdx>0)loadChapter(chIdx-1);});
+document.getElementById("btnNext").addEventListener("click",function(){
+  if(chIdx<chapters.length-1)loadChapter(chIdx+1);
+  else newChapter();
+});
 document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();saveNow();}});
+document.addEventListener("click",function(e){
+  var pop=document.getElementById("fontPopup");
+  if(pop.style.display==="flex"&&!pop.contains(e.target)&&e.target.id!=="btnFont")pop.style.display="none";
+});
+
+// Auto-login if session exists
+(function(){
+  var tok=sessionStorage.getItem("writer_token");
+  if(tok){CFG.token=tok;enterEditor();}
+})();
 </script>
 </body>
 </html>
