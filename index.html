@@ -346,16 +346,20 @@ function loadRemote(){
     chapters=parseChapters(text);
     chIdx=0;
     if(chapters.length===0)chapters=[{title:"",content:""}];
-    loadChapter(0);
-    updateChapterUI();
+    var ch0=chapters[0]||{title:"",content:""};
+    document.getElementById("chTitleInput").value=ch0.title||"";
+    document.getElementById("editor").value=ch0.content||"";
+    updateChapterUI();autoResize();updateWordCount();
     setStatus("✓ 已加载","saved");
     setTimeout(function(){setStatus("");},4000);
   }).catch(function(e){
     setStatus("加载失败","error");
     chapters=[{title:"",content:""}];
     chIdx=0;
-    loadChapter(0);
+    document.getElementById("chTitleInput").value="";
+    document.getElementById("editor").value="";
     lastFullContent="";
+    updateChapterUI();updateWordCount();
     console.error("Load error:",e);
   });
 }
