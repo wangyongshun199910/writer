@@ -403,7 +403,7 @@ function enterEditor(){
   document.getElementById("app").style.display="block";
   if(localStorage.getItem("writer_dark")==="true")document.body.classList.add("dark");
   applyFontSize(localStorage.getItem("writer_fontSize")||16);
-  if(localStorage.getItem("writer_zoomLock")==="1")toggleZoomLock();
+  if(localStorage.getItem("writer_zoomLock")!=="0")toggleZoomLock();
   loadRemote();
 }
 
