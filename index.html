@@ -64,8 +64,8 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
 #fontPopup span{font-size:13px;color:var(--text);min-width:40px;text-align:center}
 
 /* Floating note button */
-#noteFab{position:fixed;right:20px;bottom:76px;width:54px;height:54px;border-radius:50%;background:var(--accent);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:55;box-shadow:0 3px 14px rgba(0,0,0,0.25);border:none;transition:transform .15s}
-#noteFab:active{transform:scale(.92)}
+#noteFab{position:fixed;right:16px;bottom:80px;height:50px;padding:0 20px;border-radius:25px;background:var(--accent);color:#fff;font-size:16px;font-weight:bold;display:flex;align-items:center;gap:6px;cursor:pointer;z-index:60;box-shadow:0 3px 14px rgba(0,0,0,0.25);border:none;transition:transform .15s}
+#noteFab:active{transform:scale(.94)}
 
 /* Note panel */
 #notePanel{position:fixed;inset:0;background:var(--bg);z-index:80;display:none;flex-direction:column;padding:16px}
@@ -148,7 +148,7 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
 </div>
 
 <!-- Floating note button -->
-<button id="noteFab" onclick="toggleNotePanel()">📝</button>
+<button id="noteFab" onclick="toggleNotePanel()">📝 便签</button>
 
 <!-- Note panel -->
 <div id="notePanel">
