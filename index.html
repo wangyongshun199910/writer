@@ -113,8 +113,11 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
 #sideNoteStatus.saving{color:#c8945a}
 #sideNoteStatus.saved{color:#6a9}
 #sideNoteStatus.error{color:#d66}
-#sideNoteList{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;overflow-y:auto;max-height:38vh}
+#sideNoteList{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;overflow-y:auto;max-height:45vh;flex-shrink:0}
 .sideChip{padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .15s}
+#sideAddBtn{width:100%;padding:8px;margin-bottom:10px;border:1px dashed var(--border);border-radius:8px;background:transparent;color:var(--accent);font-size:14px;cursor:pointer;transition:all .15s}
+#sideAddBtn:hover{border-color:var(--accent)}
+#sideEditor{display:none;flex-direction:column;flex:1;min-height:0}
 .sideChip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 #sideNoteTitle{width:100%;font:bold 16px/1.4 'Georgia','Noto Serif SC',serif;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);color:var(--text);padding:7px 10px;margin-bottom:8px;outline:none}
 #sideNoteTitle::placeholder{color:#bbb}
@@ -202,14 +205,16 @@ body.note-desktop #bottombar{left:0;right:320px;transform:none;width:auto;border
   <div id="sideHeader">
     <span class="title">便签</span>
     <span id="sideNoteStatus"></span>
-    <button class="accent" onclick="newNote()">+ 新增</button>
   </div>
   <div id="sideNoteList"></div>
-  <input id="sideNoteTitle" placeholder="标题（人物性格 / 故事情节 / 灵感）">
-  <textarea id="sideNoteContent" placeholder="记录你的灵感..."></textarea>
-  <div id="sideFooter">
-    <button id="sideNoteDelete" onclick="deleteNote()">删除</button>
-    <button id="sideNoteSave" onclick="forceSaveNote()">保存</button>
+  <button id="sideAddBtn" onclick="newNote()">+ 新增</button>
+  <div id="sideEditor" style="display:none">
+    <input id="sideNoteTitle" placeholder="标题（人物性格 / 故事情节 / 灵感）">
+    <textarea id="sideNoteContent" placeholder="记录你的灵感..."></textarea>
+    <div id="sideFooter">
+      <button id="sideNoteDelete" onclick="deleteNote()">删除</button>
+      <button id="sideNoteSave" onclick="forceSaveNote()">保存</button>
+    </div>
   </div>
 </div>
 
@@ -498,6 +503,7 @@ function toggleTheme(){
 
 // ---- Note (便签) ----
 var isDesktop=false;
+var sideExpanded=false;
 
 function toggleNotePanel(){
   var panel=document.getElementById("notePanel");
@@ -516,13 +522,14 @@ function saveCurNote(){
 }
 function renderNoteChips(listId,chipClass){
   var list=document.getElementById(listId);
+  var isSide=(listId==="sideNoteList");
   list.innerHTML="";
   for(var i=0;i<notes.length;i++){
     var n=notes[i];
     var chip=document.createElement("div");
     chip.className=chipClass+(i===noteIdx?" active":"");
     chip.textContent=n.title||("便签"+(i+1));
-    (function(idx){chip.onclick=function(){switchNote(idx);};})(i);
+    (function(idx){chip.onclick=function(){if(isSide)switchSideNote(idx);else switchNote(idx);};})(i);
     list.appendChild(chip);
   }
 }
@@ -535,16 +542,29 @@ function renderNotes(){
   document.getElementById("noteContent").value=n.content||"";
   document.getElementById("sideNoteTitle").value=n.title||"";
   document.getElementById("sideNoteContent").value=n.content||"";
+  document.getElementById("sideEditor").style.display=sideExpanded?"flex":"none";
 }
 function switchNote(idx){
   saveCurNote();
   noteIdx=idx;
   renderNotes();
 }
+function switchSideNote(idx){
+  if(sideExpanded&&noteIdx===idx){
+    saveCurNote();
+    sideExpanded=false;
+  }else{
+    saveCurNote();
+    noteIdx=idx;
+    sideExpanded=true;
+  }
+  renderNotes();
+}
 function newNote(){
   saveCurNote();
   notes.push({title:"",content:""});
   noteIdx=notes.length-1;
+  sideExpanded=true;
   renderNotes();
   noteTitleEl().focus();
 }
@@ -555,6 +575,7 @@ function deleteNote(){
     notes.splice(noteIdx,1);
     if(noteIdx>=notes.length)noteIdx=notes.length-1;
   }
+  sideExpanded=true;
   renderNotes();
   onNoteChange();
 }
