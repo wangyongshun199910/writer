@@ -591,6 +591,21 @@ document.addEventListener("click",function(e){
   if(pop.style.display==="flex"&&!pop.contains(e.target)&&e.target.id!=="btnFont")pop.style.display="none";
 });
 
+// ---- Tab 缩进 ----
+function handleTab(e){
+  if(e.key!=="Tab")return;
+  e.preventDefault();
+  var el=e.target;
+  var start=el.selectionStart;
+  var end=el.selectionEnd;
+  var indent="\u3000\u3000"; // 2 个全角空格（中文首行缩进）
+  el.value=el.value.substring(0,start)+indent+el.value.substring(end);
+  el.selectionStart=el.selectionEnd=start+indent.length;
+  el.dispatchEvent(new Event("input",{bubbles:true}));
+}
+document.getElementById("editor").addEventListener("keydown",handleTab);
+document.getElementById("noteContent").addEventListener("keydown",handleTab);
+
 // Auto-login
 (function(){
   var tok=sessionStorage.getItem("writer_token");
