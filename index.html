@@ -63,8 +63,43 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
 #fontPopup input[type=range]{width:120px}
 #fontPopup span{font-size:13px;color:var(--text);min-width:40px;text-align:center}
 
+/* Floating note button */
+#noteFab{position:fixed;right:20px;bottom:76px;width:54px;height:54px;border-radius:50%;background:var(--accent);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:55;box-shadow:0 3px 14px rgba(0,0,0,0.25);border:none;transition:transform .15s}
+#noteFab:active{transform:scale(.92)}
+
+/* Note panel */
+#notePanel{position:fixed;inset:0;background:var(--bg);z-index:80;display:none;flex-direction:column;padding:16px}
+#notePanel.open{display:flex}
+#noteHeader{display:flex;align-items:center;gap:10px;padding:4px 0 12px;border-bottom:1px solid var(--border)}
+#noteHeader .title{font:bold 18px 'Georgia',serif;color:var(--accent);flex:1}
+#noteHeader button{background:var(--border);border:none;color:var(--text);padding:6px 14px;border-radius:6px;font-size:14px;cursor:pointer}
+#noteHeader button.accent{background:var(--accent);color:#fff}
+#noteHeader button:active{opacity:.8}
+#noteSaveStatus{font-size:12px;color:#999;margin-left:auto}
+#noteSaveStatus.saving{color:#c8945a}
+#noteSaveStatus.saved{color:#6a9}
+#noteSaveStatus.error{color:#d66}
+
+#noteList{display:flex;gap:8px;overflow-x:auto;padding:12px 0;flex-wrap:nowrap}
+#noteList::-webkit-scrollbar{height:4px}
+#noteList::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.noteChip{flex:0 0 auto;padding:6px 14px;border:1px solid var(--border);border-radius:16px;font-size:13px;cursor:pointer;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;color:var(--text);transition:all .15s}
+.noteChip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+#noteTitle{width:100%;font:bold 18px/1.4 'Georgia','Noto Serif SC',serif;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);color:var(--text);padding:8px 12px;margin-bottom:10px;outline:none}
+#noteTitle::placeholder{color:#bbb}
+#noteContent{flex:1;width:100%;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);color:var(--text);padding:12px;font:15px/1.7 'Georgia','Noto Serif SC',serif;outline:none;resize:none;min-height:40vh}
+#noteContent::placeholder{color:#ccc}
+
+#noteFooter{display:flex;gap:10px;padding-top:12px}
+#noteFooter button{flex:1;padding:10px;border:none;border-radius:6px;font-size:14px;cursor:pointer}
+#btnNoteDelete{background:var(--border);color:var(--text)}
+#btnNoteSave{background:var(--accent);color:#fff;font-weight:bold}
+#noteFooter button:active{opacity:.8}
+
 @media(min-width:768px){
   #bottombar{left:50%;right:auto;transform:translateX(-50%);width:720px;border-radius:8px 8px 0 0;padding:8px 16px}
+  #notePanel{left:50%;right:auto;transform:translateX(-50%);width:520px;max-width:100vw;border-radius:12px 12px 0 0;box-shadow:0 -4px 24px var(--shadow)}
 }
 
 .shake{animation:shake .4s}
@@ -112,6 +147,26 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
   <span>A+</span>
 </div>
 
+<!-- Floating note button -->
+<button id="noteFab" onclick="toggleNotePanel()">📝</button>
+
+<!-- Note panel -->
+<div id="notePanel">
+  <div id="noteHeader">
+    <span class="title">便签</span>
+    <span id="noteSaveStatus"></span>
+    <button id="btnNoteNew" class="accent" onclick="newNote()">+ 新增</button>
+    <button id="btnNoteClose" onclick="toggleNotePanel()">✕</button>
+  </div>
+  <div id="noteList"></div>
+  <input id="noteTitle" placeholder="便签标题（人物性格 / 故事情节 / 灵感）">
+  <textarea id="noteContent" placeholder="记录你的灵感..."></textarea>
+  <div id="noteFooter">
+    <button id="btnNoteDelete" onclick="deleteNote()">删除</button>
+    <button id="btnNoteSave" onclick="forceSaveNote()">保存</button>
+  </div>
+</div>
+
 <script>
 // ============================================================
 // Encrypted config (AES-256-GCM + PBKDF2-SHA256)
@@ -120,8 +175,10 @@ var ENC={salt:"qWqf4hw7OfyWQiS1W1DHHQ==",iv:"L9ADvK1y4kz13L3v",enc:"UhE2Qz3lxTzo
 var PW_HASH="0a42b8f38c2c1b24ac890f9f72abb8a186160e9a7e909237a84734660154487b";
 
 var CFG={owner:"wangyongshun199910",repo:"writer",branch:"main",path:"novel.md",token:""};
+var NOTES_PATH="notes.md";
 var saveTimer=null,lastFullContent=null,dirty=false,savingInProgress=false;
 var chapters=[],chIdx=0;
+var notes=[],noteIdx=0,noteSaving=false,noteTimer=null,lastNotesContent="";
 var zoomLocked=false;
 
 // ---- UTF-8 safe base64 ----
@@ -268,9 +325,10 @@ function toggleFontPopup(){
   pop.style.display=pop.style.display==="flex"?"none":"flex";
 }
 
-// ---- GitHub API ----
-function api(method,body){
-  var url="https://api.github.com/repos/"+CFG.owner+"/"+CFG.repo+"/contents/"+CFG.path;
+// ---- GitHub API (path optional) ----
+function api(method,body,path){
+  var p=path||CFG.path;
+  var url="https://api.github.com/repos/"+CFG.owner+"/"+CFG.repo+"/contents/"+p;
   var h={"Authorization":"Bearer "+CFG.token,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};
   var o={method:method,headers:h};
   if(body){o.headers["Content-Type"]="application/json";o.body=JSON.stringify(body);}
@@ -280,7 +338,7 @@ function api(method,body){
   });
 }
 
-// ---- Manual save (always tries, gives feedback) ----
+// ---- Chapter save ----
 function forceSave(){
   clearTimeout(saveTimer);
   saveCurChapter();
@@ -294,8 +352,6 @@ function flashBtn(txt){
   btn.textContent=txt;
   setTimeout(function(){btn.textContent=orig;},800);
 }
-
-// ---- Auto save (skips if no change) ----
 function saveNow(){
   if(savingInProgress)return;
   saveCurChapter();
@@ -304,8 +360,6 @@ function saveNow(){
   if(full===lastFullContent)return;
   doSaveExec(full);
 }
-
-// ---- Core save (with concurrency guard) ----
 function doSaveExec(full){
   if(savingInProgress)return;
   savingInProgress=true;
@@ -322,7 +376,6 @@ function doSaveExec(full){
     console.error("Save error:",e);
   });
 }
-
 function doSave(text,sha){
   var body={message:"Update "+CFG.path,content:utf8ToB64(text),branch:CFG.branch};
   if(sha)body.sha=sha;
@@ -337,7 +390,7 @@ function doSave(text,sha){
   });
 }
 
-// ---- Load ----
+// ---- Chapter load ----
 function loadRemote(){
   setStatus("加载中...","saving");
   api("GET").then(function(d){
@@ -397,6 +450,121 @@ function toggleTheme(){
   localStorage.setItem("writer_dark",document.body.classList.contains("dark"));
 }
 
+// ---- Note (便签) ----
+function toggleNotePanel(){
+  var panel=document.getElementById("notePanel");
+  panel.classList.toggle("open");
+  if(panel.classList.contains("open")){
+    loadNotes();
+  }
+}
+function saveCurNote(){
+  var title=document.getElementById("noteTitle").value.trim();
+  var content=document.getElementById("noteContent").value;
+  if(!notes[noteIdx])notes[noteIdx]={title:"",content:""};
+  notes[noteIdx]={title:title,content:content};
+}
+function renderNotes(){
+  var list=document.getElementById("noteList");
+  list.innerHTML="";
+  for(var i=0;i<notes.length;i++){
+    var n=notes[i];
+    var chip=document.createElement("div");
+    chip.className="noteChip"+(i===noteIdx?" active":"");
+    chip.textContent=n.title||("便签"+(i+1));
+    (function(idx){chip.onclick=function(){switchNote(idx);};})(i);
+    list.appendChild(chip);
+  }
+  if(!notes[noteIdx])notes[noteIdx]={title:"",content:""};
+  document.getElementById("noteTitle").value=notes[noteIdx].title||"";
+  document.getElementById("noteContent").value=notes[noteIdx].content||"";
+}
+function switchNote(idx){
+  saveCurNote();
+  noteIdx=idx;
+  renderNotes();
+}
+function newNote(){
+  saveCurNote();
+  notes.push({title:"",content:""});
+  noteIdx=notes.length-1;
+  renderNotes();
+  document.getElementById("noteTitle").focus();
+}
+function deleteNote(){
+  if(notes.length<=1){
+    notes=[{title:"",content:""}];noteIdx=0;
+  }else{
+    notes.splice(noteIdx,1);
+    if(noteIdx>=notes.length)noteIdx=notes.length-1;
+  }
+  renderNotes();
+  onNoteChange();
+}
+function onNoteChange(){
+  saveCurNote();
+  setNoteStatus("● 未保存","");
+  clearTimeout(noteTimer);
+  noteTimer=setTimeout(function(){forceSaveNote();},3000);
+}
+function setNoteStatus(text,cls){
+  var el=document.getElementById("noteSaveStatus");
+  el.textContent=text;el.className=cls||"";
+}
+function forceSaveNote(){
+  clearTimeout(noteTimer);
+  saveCurNote();
+  var json=JSON.stringify(notes);
+  if(json===lastNotesContent)return;
+  if(noteSaving)return;
+  noteSaving=true;
+  setNoteStatus("保存中...","saving");
+  api("GET",null,NOTES_PATH).then(function(d){
+    return putNote(json,d.sha);
+  }).catch(function(){
+    return putNote(json,null);
+  }).then(function(){
+    noteSaving=false;
+  }).catch(function(e){
+    noteSaving=false;
+    setNoteStatus("保存失败","error");
+    console.error("Note save error:",e);
+  });
+}
+function putNote(json,sha){
+  var body={message:"Update notes.md",content:utf8ToB64(json),branch:CFG.branch};
+  if(sha)body.sha=sha;
+  return api("PUT",body,NOTES_PATH).then(function(){
+    lastNotesContent=json;
+    setNoteStatus("✓ 已保存","saved");
+    setTimeout(function(){setNoteStatus("");},4000);
+  }).catch(function(e){
+    setNoteStatus("保存失败","error");
+    console.error("Note PUT error:",e);
+    throw e;
+  });
+}
+function loadNotes(){
+  setNoteStatus("加载中...","saving");
+  api("GET",null,NOTES_PATH).then(function(d){
+    var text=b64ToUtf8(d.content.replace(/\n/g,""));
+    try{notes=JSON.parse(text);}catch(e){notes=[];}
+    if(!notes.length)notes=[{title:"",content:""}];
+    lastNotesContent=JSON.stringify(notes);
+    noteIdx=0;
+    renderNotes();
+    setNoteStatus("✓ 已加载","saved");
+    setTimeout(function(){setNoteStatus("");},4000);
+  }).catch(function(e){
+    notes=[{title:"",content:""}];
+    lastNotesContent="[]";
+    noteIdx=0;
+    renderNotes();
+    setNoteStatus("");
+    console.error("Note load error:",e);
+  });
+}
+
 // ---- Init ----
 function enterEditor(){
   document.getElementById("loginOverlay").style.display="none";
@@ -411,6 +579,8 @@ function enterEditor(){
 document.getElementById("chTitleInput").addEventListener("input",onChange);
 document.getElementById("editor").addEventListener("input",function(){onChange();autoResize();});
 document.getElementById("fontSlider").addEventListener("input",function(){applyFontSize(this.value);});
+document.getElementById("noteTitle").addEventListener("input",onNoteChange);
+document.getElementById("noteContent").addEventListener("input",onNoteChange);
 document.getElementById("btnPrev").addEventListener("click",function(){if(chIdx>0)loadChapter(chIdx-1);});
 document.getElementById("btnNext").addEventListener("click",function(){
   if(chIdx<chapters.length-1)loadChapter(chIdx+1);else newChapter();
