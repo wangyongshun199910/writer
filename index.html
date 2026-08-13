@@ -102,6 +102,36 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
   #notePanel{left:50%;right:auto;transform:translateX(-50%);width:520px;max-width:100vw;border-radius:12px 12px 0 0;box-shadow:0 -4px 24px var(--shadow)}
 }
 
+/* Desktop note sidebar */
+#noteSidebar{position:fixed;top:0;right:0;bottom:0;width:320px;background:var(--bg);border-left:1px solid var(--border);z-index:50;padding:16px;overflow-y:auto;display:none;flex-direction:column}
+#sideHeader{display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:12px}
+#sideHeader .title{font:bold 17px 'Georgia',serif;color:var(--accent);flex:1}
+#sideHeader button{background:var(--border);border:none;color:var(--text);padding:5px 12px;border-radius:6px;font-size:13px;cursor:pointer}
+#sideHeader button.accent{background:var(--accent);color:#fff}
+#sideHeader button:active{opacity:.8}
+#sideNoteStatus{font-size:11px;color:#999}
+#sideNoteStatus.saving{color:#c8945a}
+#sideNoteStatus.saved{color:#6a9}
+#sideNoteStatus.error{color:#d66}
+#sideNoteList{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;overflow-y:auto;max-height:38vh}
+.sideChip{padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .15s}
+.sideChip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+#sideNoteTitle{width:100%;font:bold 16px/1.4 'Georgia','Noto Serif SC',serif;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);color:var(--text);padding:7px 10px;margin-bottom:8px;outline:none}
+#sideNoteTitle::placeholder{color:#bbb}
+#sideNoteContent{flex:1;width:100%;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);color:var(--text);padding:10px;font:14px/1.7 'Georgia','Noto Serif SC',serif;outline:none;resize:none;min-height:30vh}
+#sideNoteContent::placeholder{color:#ccc}
+#sideFooter{display:flex;gap:8px;padding-top:10px}
+#sideFooter button{flex:1;padding:8px;border:none;border-radius:6px;font-size:13px;cursor:pointer}
+#sideNoteDelete{background:var(--border);color:var(--text)}
+#sideNoteSave{background:var(--accent);color:#fff;font-weight:bold}
+#sideFooter button:active{opacity:.8}
+
+/* Desktop layout: hide fab, show sidebar */
+body.note-desktop #noteFab{display:none}
+body.note-desktop #noteSidebar{display:flex}
+body.note-desktop #app{margin-right:320px}
+body.note-desktop #bottombar{left:0;right:320px;transform:none;width:auto;border-radius:0}
+
 .shake{animation:shake .4s}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 </style>
@@ -164,6 +194,22 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
   <div id="noteFooter">
     <button id="btnNoteDelete" onclick="deleteNote()">删除</button>
     <button id="btnNoteSave" onclick="forceSaveNote()">保存</button>
+  </div>
+</div>
+
+<!-- Desktop note sidebar -->
+<div id="noteSidebar">
+  <div id="sideHeader">
+    <span class="title">便签</span>
+    <span id="sideNoteStatus"></span>
+    <button class="accent" onclick="newNote()">+ 新增</button>
+  </div>
+  <div id="sideNoteList"></div>
+  <input id="sideNoteTitle" placeholder="标题（人物性格 / 故事情节 / 灵感）">
+  <textarea id="sideNoteContent" placeholder="记录你的灵感..."></textarea>
+  <div id="sideFooter">
+    <button id="sideNoteDelete" onclick="deleteNote()">删除</button>
+    <button id="sideNoteSave" onclick="forceSaveNote()">保存</button>
   </div>
 </div>
 
@@ -451,6 +497,8 @@ function toggleTheme(){
 }
 
 // ---- Note (便签) ----
+var isDesktop=false;
+
 function toggleNotePanel(){
   var panel=document.getElementById("notePanel");
   panel.classList.toggle("open");
@@ -458,26 +506,35 @@ function toggleNotePanel(){
     loadNotes();
   }
 }
+function noteTitleEl(){return isDesktop?document.getElementById("sideNoteTitle"):document.getElementById("noteTitle");}
+function noteContentEl(){return isDesktop?document.getElementById("sideNoteContent"):document.getElementById("noteContent");}
 function saveCurNote(){
-  var title=document.getElementById("noteTitle").value.trim();
-  var content=document.getElementById("noteContent").value;
+  var title=noteTitleEl().value.trim();
+  var content=noteContentEl().value;
   if(!notes[noteIdx])notes[noteIdx]={title:"",content:""};
   notes[noteIdx]={title:title,content:content};
 }
-function renderNotes(){
-  var list=document.getElementById("noteList");
+function renderNoteChips(listId,chipClass){
+  var list=document.getElementById(listId);
   list.innerHTML="";
   for(var i=0;i<notes.length;i++){
     var n=notes[i];
     var chip=document.createElement("div");
-    chip.className="noteChip"+(i===noteIdx?" active":"");
+    chip.className=chipClass+(i===noteIdx?" active":"");
     chip.textContent=n.title||("便签"+(i+1));
     (function(idx){chip.onclick=function(){switchNote(idx);};})(i);
     list.appendChild(chip);
   }
+}
+function renderNotes(){
+  renderNoteChips("noteList","noteChip");
+  renderNoteChips("sideNoteList","sideChip");
   if(!notes[noteIdx])notes[noteIdx]={title:"",content:""};
-  document.getElementById("noteTitle").value=notes[noteIdx].title||"";
-  document.getElementById("noteContent").value=notes[noteIdx].content||"";
+  var n=notes[noteIdx];
+  document.getElementById("noteTitle").value=n.title||"";
+  document.getElementById("noteContent").value=n.content||"";
+  document.getElementById("sideNoteTitle").value=n.title||"";
+  document.getElementById("sideNoteContent").value=n.content||"";
 }
 function switchNote(idx){
   saveCurNote();
@@ -489,7 +546,7 @@ function newNote(){
   notes.push({title:"",content:""});
   noteIdx=notes.length-1;
   renderNotes();
-  document.getElementById("noteTitle").focus();
+  noteTitleEl().focus();
 }
 function deleteNote(){
   if(notes.length<=1){
@@ -508,8 +565,18 @@ function onNoteChange(){
   noteTimer=setTimeout(function(){forceSaveNote();},3000);
 }
 function setNoteStatus(text,cls){
-  var el=document.getElementById("noteSaveStatus");
-  el.textContent=text;el.className=cls||"";
+  var a=document.getElementById("noteSaveStatus");
+  a.textContent=text;a.className=cls||"";
+  var b=document.getElementById("sideNoteStatus");
+  b.textContent=text;b.className=cls||"";
+}
+function updateDeviceType(){
+  var touch=(navigator.maxTouchPoints||0)>0||("ontouchstart" in window);
+  var mobileUA=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  isDesktop=!touch&&!mobileUA&&window.innerWidth>=1024;
+  if(notes.length>0)renderNotes();
+  if(isDesktop){document.body.classList.add("note-desktop");}
+  else{document.body.classList.remove("note-desktop");}
 }
 function forceSaveNote(){
   clearTimeout(noteTimer);
@@ -572,6 +639,8 @@ function enterEditor(){
   if(localStorage.getItem("writer_dark")==="true")document.body.classList.add("dark");
   applyFontSize(localStorage.getItem("writer_fontSize")||16);
   if(localStorage.getItem("writer_zoomLock")!=="0")toggleZoomLock();
+  updateDeviceType();
+  if(isDesktop)loadNotes();
   loadRemote();
 }
 
@@ -581,6 +650,9 @@ document.getElementById("editor").addEventListener("input",function(){onChange()
 document.getElementById("fontSlider").addEventListener("input",function(){applyFontSize(this.value);});
 document.getElementById("noteTitle").addEventListener("input",onNoteChange);
 document.getElementById("noteContent").addEventListener("input",onNoteChange);
+document.getElementById("sideNoteTitle").addEventListener("input",onNoteChange);
+document.getElementById("sideNoteContent").addEventListener("input",onNoteChange);
+window.addEventListener("resize",updateDeviceType);
 document.getElementById("btnPrev").addEventListener("click",function(){if(chIdx>0)loadChapter(chIdx-1);});
 document.getElementById("btnNext").addEventListener("click",function(){
   if(chIdx<chapters.length-1)loadChapter(chIdx+1);else newChapter();
