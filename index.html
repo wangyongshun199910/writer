@@ -604,12 +604,10 @@ function setNoteStatus(text,cls){
   b.textContent=text;b.className=cls||"";
 }
 function updateDeviceType(){
-  var touch=(navigator.maxTouchPoints||0)>0||("ontouchstart" in window);
-  var mobileUA=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  isDesktop=!touch&&!mobileUA&&window.innerWidth>=1024;
+  // 所有设备统一使用悬浮球 + 全屏便签面板
+  isDesktop=false;
   if(notes.length>0)renderNotes();
-  if(isDesktop){document.body.classList.add("note-desktop");}
-  else{document.body.classList.remove("note-desktop");}
+  document.body.classList.remove("note-desktop");
 }
 function collapseSidebar(){
   document.body.classList.add("side-collapsed");
