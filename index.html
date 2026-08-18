@@ -350,7 +350,20 @@ function loadChapter(idx){
   var ch=chapters[chIdx];
   document.getElementById("chTitleInput").value=ch.title||"";
   document.getElementById("editor").value=ch.content||"";
+  markCurChapter();
   updateChapterUI();autoResize();updateWordCount();
+}
+var markerTimer=null;
+function markCurChapter(){
+  if(markerTimer)clearTimeout(markerTimer);
+  markerTimer=setTimeout(function(){
+    try{
+      if(typeof chIdx!=="number"||!chapters||!chapters[chIdx])return;
+      var mc={idx:chIdx,title:chapters[chIdx].title||""};
+      var body={message:"mark chapter",content:utf8ToB64(JSON.stringify(mc)),branch:CFG.branch};
+      api("GET",null,"cur_chapter.json").then(function(d){body.sha=d.sha;return api("PUT",body,"cur_chapter.json");}).catch(function(){return api("PUT",body,"cur_chapter.json");}).catch(function(){});
+    }catch(e){}
+  },800);
 }
 function newChapter(){
   saveCurChapter();
@@ -488,6 +501,7 @@ function loadRemote(){
     document.getElementById("chTitleInput").value=ch0.title||"";
     document.getElementById("editor").value=ch0.content||"";
     updateChapterUI();autoResize();updateWordCount();
+    markCurChapter();
     setStatus("✓ 已加载","saved");
     setTimeout(function(){setStatus("");},4000);
   }).catch(function(e){
