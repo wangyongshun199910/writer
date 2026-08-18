@@ -184,6 +184,7 @@ body.note-desktop.side-collapsed #sideExpandFab{display:block}
 <div id="bottombar">
   <button id="btnPrev" title="上一章">◀</button>
   <button id="btnNext" title="下一章">▶</button>
+  <button id="btnDel" title="删除当前章节" onclick="deleteCurChapter()">🗑</button>
   <span id="chIndicator"></span>
   <span id="bottomStatus"></span>
   <button id="btnFont" onclick="toggleFontPopup()">A</button>
@@ -364,6 +365,20 @@ function markCurChapter(){
       api("GET",null,"cur_chapter.json").then(function(d){body.sha=d.sha;return api("PUT",body,"cur_chapter.json");}).catch(function(){return api("PUT",body,"cur_chapter.json");}).catch(function(){});
     }catch(e){}
   },800);
+}
+function deleteCurChapter(){
+  if(!chapters.length){return;}
+  var ch=chapters[chIdx];
+  var name=(ch&&ch.title)?("第"+(chIdx+1)+"章「"+ch.title+"】"):("第"+(chIdx+1)+"章");
+  if(!confirm("确定删除"+name+"吗？\n删除后不可恢复，请确认。")){return;}
+  chapters.splice(chIdx,1);
+  if(chIdx>=chapters.length){chIdx=chapters.length-1;}
+  if(chIdx<0){chapters=[{title:"",content:""}];chIdx=0;}
+  document.getElementById("chTitleInput").value=chapters[chIdx].title||"";
+  document.getElementById("editor").value=chapters[chIdx].content||"";
+  updateChapterUI();autoResize();updateWordCount();
+  dirty=true;
+  forceSave();
 }
 function newChapter(){
   saveCurChapter();
