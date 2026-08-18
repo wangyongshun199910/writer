@@ -67,6 +67,15 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
 #noteFab{position:fixed;right:16px;bottom:80px;height:50px;padding:0 20px;border-radius:25px;background:var(--accent);color:#fff;font-size:16px;font-weight:bold;display:flex;align-items:center;gap:6px;cursor:pointer;z-index:60;box-shadow:0 3px 14px rgba(0,0,0,0.25);border:none;transition:transform .15s}
 #noteFab:active{transform:scale(.94)}
 
+/* Quick input fab */
+#quickInputFab{position:fixed;right:16px;bottom:145px;height:44px;padding:0 18px;border-radius:22px;background:var(--accent);color:#fff;font-size:15px;font-weight:bold;display:flex;align-items:center;gap:5px;cursor:pointer;z-index:60;box-shadow:0 3px 14px rgba(0,0,0,0.25);border:none;transition:transform .15s}
+#quickInputFab:active{transform:scale(.94)}
+#quickInputPanel{position:fixed;right:16px;bottom:200px;width:300px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:10px;display:none;flex-direction:column;gap:8px;z-index:70;box-shadow:0 4px 20px var(--shadow)}
+#quickInputPanel.open{display:flex}
+#quickInput{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font:14px/1.6 'Georgia','Noto Serif SC',serif;outline:none;background:var(--bg);color:var(--text)}
+#quickInput:focus{border-color:var(--accent)}
+#quickInputPanel .hint{font-size:11px;color:#999;text-align:right}
+
 /* Note panel */
 #notePanel{position:fixed;inset:0;background:var(--bg);z-index:80;display:none;flex-direction:column;padding:16px}
 #notePanel.open{display:flex}
@@ -190,6 +199,13 @@ body.note-desktop.side-collapsed #sideExpandFab{display:block}
 
 <!-- Floating note button -->
 <button id="noteFab" onclick="toggleNotePanel()">📝 便签</button>
+
+<!-- Quick input fab -->
+<button id="quickInputFab" onclick="toggleQuickInput()">✎ 输入</button>
+<div id="quickInputPanel">
+  <input id="quickInput" placeholder="输入内容，回车插入正文" autocomplete="off">
+  <div class="hint">回车 = 插入为一个段落 · Esc 关闭</div>
+</div>
 
 <!-- Note panel -->
 <div id="notePanel">
@@ -617,6 +633,48 @@ function expandSidebar(){
   document.body.classList.remove("side-collapsed");
   localStorage.setItem("writer_side_collapsed","0");
 }
+
+// ---- Quick Input (悬浮快速输入) ----
+var editorEverFocused=false;
+document.getElementById("editor").addEventListener("focus",function(){editorEverFocused=true;});
+function toggleQuickInput(){
+  var panel=document.getElementById("quickInputPanel");
+  var open=panel.classList.toggle("open");
+  if(open){
+    var el=document.getElementById("quickInput");
+    el.value="";
+    setTimeout(function(){el.focus();},50);
+  }
+}
+function submitQuickInput(){
+  var el=document.getElementById("quickInput");
+  var text=el.value.trim();
+  if(!text)return;
+  insertParagraph(text);
+  el.value="";
+  el.focus();
+}
+function insertParagraph(text){
+  var editor=document.getElementById("editor");
+  var t=editor.value;
+  var pos=t.length;
+  if(editorEverFocused){
+    try{pos=editor.selectionStart||t.length;}catch(e){pos=t.length;}
+  }
+  var before=t.substring(0,pos);
+  var after=t.substring(pos);
+  var lead=before.length&&!before.endsWith("\n")?"\n":"";
+  var tail=after.length&&!after.startsWith("\n")?"\n":"";
+  editor.value=before+lead+text+tail+after;
+  var newPos=pos+lead.length+text.length+tail.length;
+  try{editor.selectionStart=editor.selectionEnd=newPos;}catch(e){}
+  editor.dispatchEvent(new Event("input",{bubbles:true}));
+}
+document.getElementById("quickInput").addEventListener("keydown",function(e){
+  if(e.key==="Enter"){e.preventDefault();submitQuickInput();}
+  else if(e.key==="Escape"){toggleQuickInput();}
+});
+
 function forceSaveNote(){
   clearTimeout(noteTimer);
   saveCurNote();
