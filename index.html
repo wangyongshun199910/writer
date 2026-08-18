@@ -155,7 +155,12 @@ body.note-desktop.side-collapsed #sideExpandFab{display:block}
 
 .shake{animation:shake .4s}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
-</style>
+.del-btn{
+  background:none;border:none;cursor:pointer;font-size:14px;
+  padding:2px 4px;opacity:.7;filter:grayscale(100%);
+}
+.del-btn:hover{opacity:1;filter:none;}
+
 </head>
 <body>
 
@@ -176,6 +181,7 @@ body.note-desktop.side-collapsed #sideExpandFab{display:block}
     <span class="sep"></span>
     <span id="saveStatus"></span>
     <span id="wordCount">0 字</span>
+    <button id="btnDel" class="del-btn" title="删除当前章节" onclick="deleteCurChapter()">🗑</button>
   </div>
   <textarea id="chTitleInput" placeholder="章节标题..." rows="1"></textarea>
   <textarea id="editor" placeholder="开始写作..." rows="20"></textarea>
@@ -184,7 +190,6 @@ body.note-desktop.side-collapsed #sideExpandFab{display:block}
 <div id="bottombar">
   <button id="btnPrev" title="上一章">◀</button>
   <button id="btnNext" title="下一章">▶</button>
-  <button id="btnDel" title="删除当前章节" onclick="deleteCurChapter()">🗑</button>
   <span id="chIndicator"></span>
   <span id="bottomStatus"></span>
   <button id="btnFont" onclick="toggleFontPopup()">A</button>
