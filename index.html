@@ -75,6 +75,7 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
 #quickInput{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font:14px/1.6 'Georgia','Noto Serif SC',serif;outline:none;background:var(--bg);color:var(--text)}
 #quickInput:focus{border-color:var(--accent)}
 #quickInputPanel .hint{font-size:11px;color:#999;text-align:right}
+#quickInputPanel .target{font-size:12px;color:var(--accent);font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* Note panel */
 #notePanel{position:fixed;inset:0;background:var(--bg);z-index:80;display:none;flex-direction:column;padding:16px}
@@ -203,6 +204,7 @@ body.note-desktop.side-collapsed #sideExpandFab{display:block}
 <!-- Quick input fab -->
 <button id="quickInputFab" onclick="toggleQuickInput()">✎ 输入</button>
 <div id="quickInputPanel">
+  <div id="quickInputTarget" class="target"></div>
   <input id="quickInput" placeholder="输入内容，回车插入正文" autocomplete="off">
   <div class="hint">回车 = 插入为一个段落 · Esc 关闭</div>
 </div>
@@ -364,6 +366,7 @@ function updateChapterUI(){
   document.getElementById("chIndicator").textContent=t;
   var ch=chapters[chIdx];
   document.getElementById("chapterLabel").textContent=ch&&ch.title?"第"+(chIdx+1)+"章 · "+ch.title:t;
+  updateQuickInputTarget();
   document.getElementById("btnPrev").style.opacity=chIdx===0?"0.3":"1";
   document.getElementById("btnNext").style.opacity=chIdx>=chapters.length-1?"0.3":"1";
 }
@@ -431,16 +434,17 @@ function flashBtn(txt){
   btn.textContent=txt;
   setTimeout(function(){btn.textContent=orig;},800);
 }
+var pendingSave=false;
 function saveNow(){
-  if(savingInProgress)return;
   saveCurChapter();
   var full=packChapters();
   if(!full.trim())return;
   if(full===lastFullContent)return;
+  if(savingInProgress){pendingSave=true;return;}
   doSaveExec(full);
 }
 function doSaveExec(full){
-  if(savingInProgress)return;
+  if(savingInProgress){pendingSave=true;return;}
   savingInProgress=true;
   setStatus("保存中...","saving");
   api("GET").then(function(d){
@@ -449,8 +453,10 @@ function doSaveExec(full){
     return doSave(full,null);
   }).then(function(){
     savingInProgress=false;
+    if(pendingSave){pendingSave=false;saveNow();}
   }).catch(function(e){
     savingInProgress=false;
+    pendingSave=false;
     setStatus("保存失败","error");
     console.error("Save error:",e);
   });
@@ -504,7 +510,7 @@ function onChange(){
   dirty=true;
   setStatus("● 未保存","");
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(function(){saveNow();},5000);
+  saveTimer=setTimeout(function(){saveNow();},1500);
 }
 
 function setStatus(text,cls){
@@ -643,8 +649,19 @@ function toggleQuickInput(){
   if(open){
     var el=document.getElementById("quickInput");
     el.value="";
+    updateQuickInputTarget();
     setTimeout(function(){el.focus();},50);
   }
+}
+function updateQuickInputTarget(){
+  var t=document.getElementById("quickInputTarget");
+  if(!t)return;
+  if(typeof chIdx!=="number"||!chapters||!chapters[chIdx]){
+    t.textContent="将写入 → 当前章节";
+    return;
+  }
+  var ch=chapters[chIdx];
+  t.textContent="将写入 → "+(ch&&ch.title?("第"+(chIdx+1)+"章 · "+ch.title):"第"+(chIdx+1)+"章");
 }
 function submitQuickInput(){
   var el=document.getElementById("quickInput");
@@ -669,6 +686,15 @@ function insertParagraph(text){
   var newPos=pos+lead.length+text.length+tail.length;
   try{editor.selectionStart=editor.selectionEnd=newPos;}catch(e){}
   editor.dispatchEvent(new Event("input",{bubbles:true}));
+  saveQuickNow();
+}
+function saveQuickNow(){
+  saveCurChapter();
+  dirty=true;
+  setStatus("保存中...","saving");
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(function(){saveNow();},500);
+  updateQuickInputTarget();
 }
 document.getElementById("quickInput").addEventListener("keydown",function(e){
   if(e.key==="Enter"){e.preventDefault();submitQuickInput();}
@@ -751,6 +777,9 @@ document.getElementById("noteContent").addEventListener("input",onNoteChange);
 document.getElementById("sideNoteTitle").addEventListener("input",onNoteChange);
 document.getElementById("sideNoteContent").addEventListener("input",onNoteChange);
 window.addEventListener("resize",updateDeviceType);
+window.addEventListener("pagehide",function(){
+  if(dirty){saveNow();}
+});
 document.getElementById("btnPrev").addEventListener("click",function(){if(chIdx>0)loadChapter(chIdx-1);});
 document.getElementById("btnNext").addEventListener("click",function(){
   if(chIdx<chapters.length-1)loadChapter(chIdx+1);else newChapter();
