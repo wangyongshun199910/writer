@@ -425,7 +425,7 @@ function api(method,body,path){
   var p=path||CFG.path;
   var url="https://api.github.com/repos/"+CFG.owner+"/"+CFG.repo+"/contents/"+p;
   var h={"Authorization":"Bearer "+CFG.token,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};
-  var o={method:method,headers:h};
+  var o={method:method,headers:h,cache:"no-store"};
   if(body){o.headers["Content-Type"]="application/json";o.body=JSON.stringify(body);}
   return fetch(url,o).then(function(r){
     if(!r.ok)return r.json().then(function(e){throw new Error(e.message||"HTTP "+r.status)});
