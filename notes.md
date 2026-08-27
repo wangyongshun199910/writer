@@ -1,1 +1,1 @@
-[{"title":"许鸢","content":"命若浮尘"},{"title":"秦枳","content":"女主"}]
+[{"title":"许鸢","content":"命若浮尘"},{"title":"秦枳","content":"女主"},{"title":"小说思路","content":"乞丐太子，流落街头，被女主所救"}]
