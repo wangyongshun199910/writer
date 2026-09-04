@@ -29,7 +29,7 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
 #loginError{color:#d66;font-size:13px;margin-top:10px;min-height:20px}
 
 /* Editor */
-#app{max-width:720px;margin:0 auto;padding:20px 16px 120px;display:none}
+#app{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:20px 16px 120px;display:none}
 
 #topbar{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:12px;flex-wrap:wrap}
 #topbar .sep{flex:1}
@@ -156,8 +156,8 @@ body.note-desktop.side-collapsed #sideExpandFab{display:block}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 /* ===== 瑞鹤图背景（仅 PC 端显示，手机端隐藏） ===== */
 #bgLayer{position:fixed;inset:0;z-index:0;background:url('assets/background.jpg') no-repeat center/cover;display:none;pointer-events:none}
-#bgLayer::after{content:"";position:absolute;inset:0;background:rgba(250,249,246,0.55)}
-.dark #bgLayer::after{background:rgba(30,30,30,0.55)}
+#bgLayer::after{content:"";position:absolute;inset:0;background:rgba(250,249,246,0.62)}
+.dark #bgLayer::after{background:rgba(30,30,30,0.62)}
 /* 内容浮层半透明以露出背景 */
 @media(min-width:769px){
   #bgLayer{display:block}
