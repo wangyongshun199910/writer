@@ -325,6 +325,7 @@ document.getElementById("loginBtn").addEventListener("click",doLogin);
 document.getElementById("pwInput").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
 
 // ---- Chapter logic ----
+function cleanDoc(s){return s.replace(/^[ \t\u3000]*\n+/g,"").replace(/\n+[ \t\u3000]*$/g,"");}
 function parseChapters(raw){
   if(!raw)return[{title:"",content:""}];
   var result=[];
@@ -333,11 +334,11 @@ function parseChapters(raw){
   for(var i=0;i<lines.length;i++){
     var m=lines[i].match(/^##\s+(.+)/);
     if(m){
-      if(buf.length>0||curTitle)result.push({title:curTitle,content:buf.join("\n").trim()});
+      if(buf.length>0||curTitle)result.push({title:curTitle,content:cleanDoc(buf.join("\n"))});
       curTitle=m[1];buf=[];
     }else{buf.push(lines[i]);}
   }
-  result.push({title:curTitle,content:buf.join("\n").trim()});
+  result.push({title:curTitle,content:cleanDoc(buf.join("\n"))});
   if(result.length===1&&!result[0].title&&!result[0].content)return[{title:"",content:""}];
   return result;
 }
@@ -348,7 +349,7 @@ function packChapters(){
     if(ch.title)parts.push("## "+ch.title);
     if(ch.content)parts.push(ch.content);
   }
-  return parts.join("\n").trim()+"\n";
+  return cleanDoc(parts.join("\n"))+"\n";
 }
 function saveCurChapter(){
   var title=document.getElementById("chTitleInput").value.trim();
