@@ -44,7 +44,7 @@ body.zoom-locked{touch-action:pan-x pan-y;overscroll-behavior:none}
 #chTitleInput{width:100%;font:bold 24px/1.4 'Georgia','Noto Serif SC',serif;border:none;outline:none;background:transparent;color:var(--text);padding:4px 0;margin-bottom:10px;resize:none}
 #chTitleInput::placeholder{color:#bbb}
 
-#editor{width:100%;min-height:50vh;border:none;outline:none;background:transparent;color:var(--text);font-size:16px;line-height:1.8;font-family:'Georgia','Noto Serif SC',serif;resize:none;overflow-y:hidden}
+#editor{width:100%;height:calc(100vh - 240px);min-height:60vh;border:none;outline:none;background:transparent;color:var(--text);font-size:16px;line-height:1.8;font-family:'Georgia','Noto Serif SC',serif;resize:none;overflow-y:auto;padding-bottom:50px}
 #editor::placeholder{color:#ccc}
 
 /* Bottom bar */
@@ -536,9 +536,10 @@ function updateWordCount(){
   document.getElementById("wordCount").textContent=(cn+en)+" 字";
 }
 function autoResize(){
+  // 编辑区固定高度由 CSS 控制（height:calc(100vh - 240px)），
+  // 内部滚动交给 textarea 自身（overflow-y:auto），输入时不会再撑高文档导致页面跳回顶部
   var el=document.getElementById("editor");
-  el.style.height="auto";
-  el.style.height=Math.max(el.scrollHeight,window.innerHeight*0.5)+"px";
+  el.style.height="";
 }
 function toggleTheme(){
   document.body.classList.toggle("dark");
